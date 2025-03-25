@@ -1,0 +1,93 @@
+#include <ThingerESP32.h>
+#include <Adafruit_GFX.h>
+#include <Adafruit_ST7735.h>
+#include <SPI.h>
+
+// Pines del TFT
+#define TFT_CS    5
+#define TFT_RST   4  
+#define TFT_DC    2
+
+Adafruit_ST7735 tft = Adafruit_ST7735(TFT_CS, TFT_DC, TFT_RST);
+
+// Credenciales de Thinger.io
+#define USERNAME "uzhcapablo"
+#define DEVICE_ID "ESP"
+#define DEVICE_CREDENTIAL "pablo03"
+
+// Credenciales WiFi
+#define SSID "R7"
+#define PASSWORD "123456789"
+
+ThingerESP32 thing(USERNAME, DEVICE_ID, DEVICE_CREDENTIAL);
+
+bool mostrarMensaje = false;
+String mensaje = "Bienvenidos a la defensa de mi Proyecto de Grado";
+String nombre = "Pablo Uzhca 3ro Mct A";
+int x;                // Posición inicial en X
+int y = 30;           // Posición en Y (más arriba para dejar espacio abajo)
+int velocidad = 2;     // Velocidad del movimiento
+int mensajeAncho;      // Ancho total del mensaje
+int letraAncho = 12;   // Ancho aproximado de cada letra a tamaño 2
+
+void setup() {
+  Serial.begin(115200);
+
+  // Inicialización de la pantalla TFT
+  tft.initR(INITR_BLACKTAB);
+  tft.setRotation(1);  // Orientación horizontal
+  tft.fillScreen(ST77XX_BLACK);
+
+  // Conexión WiFi
+  thing.add_wifi(SSID, PASSWORD);
+
+  // Recurso para Thinger.io
+  thing["MostrarMensaje"] << [](pson &in){
+    if(in.is_empty()){     
+      in = mostrarMensaje;  // Retorna el estado actual a Thinger.io
+    }
+    else{                  
+      mostrarMensaje = in;  // Actualiza el estado cuando se recibe un comando
+      x = tft.width();      // Reiniciar mensaje desde la derecha
+    }
+  };
+
+  // Calcular ancho del mensaje completo
+  mensajeAncho = mensaje.length() * letraAncho;
+  x = tft.width();
+}
+
+void loop() {
+  thing.handle();
+
+  if (mostrarMensaje) {
+    tft.fillScreen(ST77XX_BLACK); // Limpiar pantalla
+    int xActual = x;
+
+    tft.setTextSize(2);
+    tft.setTextColor(ST77XX_RED);
+
+    for (int i = 0; i < mensaje.length(); i++) {
+      if (xActual >= 0 && (xActual + letraAncho) <= tft.width()) { 
+        tft.setCursor(xActual, y);
+        tft.print(mensaje[i]);
+      }
+      xActual += letraAncho;
+    }
+
+    tft.setTextSize(1); // Tamaño más pequeño para el nombre
+    tft.setTextColor(ST77XX_WHITE); // Color Blanco
+    tft.setCursor(10, 70); // Posición fija en la parte inferior
+    tft.print(nombre);
+
+    x -= velocidad; // Mover mensaje hacia la izquierda
+
+    if (x < -mensajeAncho) {
+      x = tft.width(); // Reinicia el mensaje cuando sale de la pantalla
+    }
+  } else {
+    tft.fillScreen(ST77XX_BLACK); // Limpia la pantalla si no se muestra el mensaje
+  }
+
+  delay(30); // Controla la velocidad del movimiento
+}
