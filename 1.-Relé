@@ -1,0 +1,21 @@
+const int relayPin = 23;   // Pin del relé
+const int buttonPin = 18;  // Pin del pulsante
+const int ledPin = 2;      // Pin del LED integrado (en algunos ESP32)
+
+bool relayState = false;   // Estado del relé
+
+void setup() {
+    pinMode(relayPin, OUTPUT);
+    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(ledPin, OUTPUT);
+}
+
+void loop() {
+    if (digitalRead(buttonPin) == LOW) {  // Botón presionado
+        delay(200);  // Debounce
+        relayState = !relayState;  // Cambia estado
+        digitalWrite(relayPin, relayState ? HIGH : LOW);
+        digitalWrite(ledPin, relayState ? HIGH : LOW);
+        while (digitalRead(buttonPin) == LOW); // Espera a soltar
+    }
+}
